@@ -22,24 +22,30 @@ class Agent(object):
     __metaclass__ = ABCMeta
     
     def __init__(self, params):
-        """Initialize an Agent object.
+        """Initialize an Agent object given a dictionary of parameters.
         
         Params
         ======
-            state_size (int): dimension of each state
-            action_size (int): dimension of each action
-            seed (int): random seed
+        * **state_size** (int) --- the state space size
+        * **action_size** (int) --- the action space size
+        * **seed** (int) --- random number seed
+        * **network_type** (string) --- can either be "QNetwork" or "DuelingQNetwork"
+        * **lr** (float) --- the learning rate
+        * **gamma** (float) -- the q-learning discount factor
+        * **tau** (float) -- the soft update factor
         """
         self.params = params
         self.state_size = self.params.get('state_size', None)
         self.action_size = self.params.get('action_size', None)
         self.seed = self.params.get('seed', 1234)
-
+        self.gamma = self.params.get('gamma', 0.99)
+        self.tau = self.params.get('tau', 0.4)
+        
         # Q-Network
         self.qnetwork_local = self.params.get('network_type', None)(self.state_size, self.action_size, self.seed).to(device)
         self.qnetwork_target = self.params.get('network_type', None)(self.state_size, self.action_size, self.seed).to(device)
 
-        self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=self.params.get('alpha', 0.001))
+        self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=self.params.get('lr', 0.001))
 
         # Replay memory: to be defined in derived classes
         self.memory = None
@@ -52,8 +58,8 @@ class Agent(object):
         
         Params
         ======
-            state (array_like): current state
-            policy (GLIEPolicy): Policy, e.g., EpsilonGreedy, for epsilon-greedy action selection
+        * **state** (array_like) --- current state
+        * **policy** (GLIEPolicy) --- Policy, e.g., EpsilonGreedy, for epsilon-greedy action selection
         """
         state = torch.from_numpy(state).float().unsqueeze(0).to(device)
         self.qnetwork_local.eval()  # we just do a forward evaluation
@@ -64,57 +70,74 @@ class Agent(object):
         return policy.apply(action_values.cpu().data.numpy())
 
 
-    def soft_update(self, local_model, target_model, tau):
+    def soft_update(self, local_model, target_model):
         """Soft update model parameters.
         θ_target = τ*θ_local + (1 - τ)*θ_target
 
         Params
         ======
-            local_model (PyTorch model): weights will be copied from
-            target_model (PyTorch model): weights will be copied to
-            tau (float): interpolation parameter 
+        * **local_model** (PyTorch model) --- weights will be copied from
+        * **target_model** (PyTorch model) --- weights will be copied to
         """
         for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
-            target_param.data.copy_(tau*local_param.data + (1.0-tau)*target_param.data)
+            target_param.data.copy_(self.tau * local_param.data + (1.0 - self.tau) * target_param.data)
     
     @abstractmethod
     def step(self, state, action, reward, next_state, done, beta):
+        """Perform a step in the environment given a state, action, reward,
+        next state, and done experience.
+
+        Params
+        ======
+        * **state** (torch.Variable) --- the current state
+        * **action** (torch.Variable) --- the current action
+        * **reward** (torch.Variable) --- the current reward
+        * **next_state** (torch.Variable) --- the next state
+        * **done** (torch.Variable) --- the done indicator
+        * **beta** (float) --- a potentially tempered beta value for prioritzed replay sampling
+
+        """
         pass
 
     @abstractmethod
-    def learn(self, experiences, gamma):
+    def learn(self, experiences):
         """Update value parameters using given batch of experience tuples.
 
         Params
         ======
-            experiences (Tuple[torch.Variable]): tuple of (s, a, r, s', done) tuples 
-            gamma (float): discount factor
+        * **experiences** (Tuple[torch.Variable]) --- tuple of (s, a, r, s', done) tuples 
         """
         pass
 
 
 class DDQN_UER_Agent(Agent):
-    """Interacts with and learns from the environment."""
+    """Double q-learning agent with a uniform replay buffer."""
 
     def __init__(self, params):
-        """Initialize an Agent object.
+        """Initialize an Agent object given a dictionary of parameters.
         
         Params
         ======
-            state_size (int): dimension of each state
-            action_size (int): dimension of each action
-            seed (int): random seed
-            qnetwork: list of either 'qnetwork' or 'dueling'
+        * **update_every** (int) --- trigger a learning process after every n-th step
+        * **experience_params** (dict) -- for example:
+        'experience_params': {
+            'seed': 184,
+            'buffer_size': 100000,
+            'batch_size': 64
+        }
         """
         super().__init__(params)
         self.update_every = self.params.get('update_every', 4)
-        self.gamma = self.params.get('gamma', 0.99)
-        self.tau = self.params.get('tau', 0.4)
         
         # Replay memory
         self.memory = UniformReplayBuffer(self.action_size, params.get('experience_params', None))
     
     def step(self, state, action, reward, next_state, done, beta):
+        """Perform a step in the environment and trigger a learning procedure
+        after every n-th step.
+
+        See super class for parameter descriptions.
+        """
         # Save experience in replay memory
         next_state = torch.from_numpy(next_state).float().unsqueeze(0).to(device)
         state = torch.from_numpy(state).float().unsqueeze(0).to(device)
@@ -127,20 +150,19 @@ class DDQN_UER_Agent(Agent):
             # If enough samples are available in memory, get random subset and learn
             if self.memory.ready():
                 experiences = self.memory.sample()
-                self.learn(experiences, self.gamma)
+                self.learn(experiences)
 
-    def learn(self, experiences, gamma):
+    def learn(self, experiences):
         """Update value parameters using given batch of experience tuples.
 
         Params
         ======
-            experiences (Tuple[torch.Variable]): tuple of (s, a, r, s', done) tuples 
-            gamma (float): discount factor
+        * **experiences** (Tuple[torch.Variable]) --- tuple of (s, a, r, s', done) tuples 
         """
         states, actions, rewards, next_states, dones = experiences
 
         Q_targets_next = self.qnetwork_target(next_states).detach().max(1)[0].unsqueeze(1)
-        Q_targets = rewards + gamma * Q_targets_next * (1 - dones)
+        Q_targets = rewards + self.gamma * Q_targets_next * (1 - dones)
         Q_expected = self.qnetwork_local(states).gather(1, actions)
 
         loss = F.mse_loss(Q_expected, Q_targets)
@@ -151,32 +173,38 @@ class DDQN_UER_Agent(Agent):
         self.optimizer.step()
         
         # ------------------- update target network ------------------- #
-        self.soft_update(self.qnetwork_local, self.qnetwork_target, self.tau)
+        self.soft_update(self.qnetwork_local, self.qnetwork_target)
 
         
 class DDQN_PER_Agent(Agent):
-    """Interacts with and learns from the environment."""
+    """Double Q-learning agent with prioritzed replay buffer."""
 
     def __init__(self, params):
         """Initialize an Agent object.
         
         Params
         ======
-            state_size (int): dimension of each state
-            action_size (int): dimension of each action
-            seed (int): random seed
-            qnetwork: list of either 'quentwork' or 'dueling'
+        * **update_every** (int) --- trigger a learning process after every n-th step
+        * **experience_params** (dict) -- for example:
+        'experience_params': {
+            'seed': 184,
+            'buffer_size': 100000,
+            'batch_size': 64
+        }
         """
         super().__init__(params)
         
         self.update_every = self.params.get('update_every', 4)
-        self.gamma = self.params.get('gamma', 0.99)
-        self.tau = self.params.get('tau', 0.4)
         
         # Replay memory
-        self.memory = PrioritizedReplayBuffer(self.action_size, params)
+        self.memory = PrioritizedReplayBuffer(self.action_size, params.get('experience_params', None))
 
     def step(self, state, action, reward, next_state, done, beta):
+        """Perform a step in the environment and trigger a learning procedure
+        after every n-th step.
+
+        See super class for parameter descriptions.
+        """
         # Save experience in replay memory
         next_state = torch.from_numpy(next_state).float().unsqueeze(0).to(device)
         state = torch.from_numpy(state).float().unsqueeze(0).to(device)
@@ -197,24 +225,24 @@ class DDQN_PER_Agent(Agent):
             # If enough samples are available in memory, get random subset and learn
             if self.memory.ready():
                 experiences = self.memory.sample(beta)
-                self.learn(experiences, self.gamma)
+                self.learn(experiences)
 
-    def learn(self, experiences, gamma):
+    def learn(self, experiences):
         """Update value parameters using given batch of experience tuples.
 
         Params
         ======
             experiences (Tuple[torch.Variable]): tuple of (s, a, r, s', done) tuples 
-            gamma (float): discount factor
         """
         states, actions, rewards, next_states, dones, weights, indices = experiences
 
         Q_targets_next = self.qnetwork_target(next_states).detach().max(1)[0].unsqueeze(1)
-        Q_targets = rewards + gamma * Q_targets_next * (1 - dones)
+        Q_targets = rewards + self.gamma * Q_targets_next * (1 - dones)
         Q_expected = self.qnetwork_local(states).gather(1, actions)
 
         loss  = (Q_expected - Q_targets).pow(2).reshape(weights.shape) * weights
         priorities = loss + EPSILON
+
         self.memory.update(indices, priorities.data.cpu().numpy())
 
         loss = loss.mean()
@@ -225,4 +253,4 @@ class DDQN_PER_Agent(Agent):
         self.optimizer.step()
         
         # ------------------- update target network ------------------- #
-        self.soft_update(self.qnetwork_local, self.qnetwork_target, self.tau)
+        self.soft_update(self.qnetwork_local, self.qnetwork_target)
