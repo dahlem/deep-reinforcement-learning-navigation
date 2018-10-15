@@ -13,18 +13,30 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 class ReplayBuffer(object):
+    """
+    Abstract base class for replay buffers.
+    """
     __metaclass__ = ABCMeta
 
     @abstractmethod
     def add(self, state, action, reward, next_state, done):
+        """
+        Add an experience tuple to the replay buffer.
+        """
         pass
     
     @abstractmethod
     def sample(self):
+        """
+        Sample from the replay buffer.
+        """
         pass
 
     @abstractmethod
     def ready(self):
+        """
+        Test whether the replay buffer is full so that it can be sampled.
+        """
         pass
     
 
@@ -36,10 +48,12 @@ class UniformReplayBuffer:
 
         Params
         ======
-            action_size (int): dimension of each action
-            buffer_size (int): maximum size of buffer
-            batch_size (int): size of each training batch
-            seed (int): random seed
+        * **action_size** (int): dimension of each action
+        
+        From a dictionary of parameters:
+        * **buffer_size** (int) --- the size of the buffer
+        * **batch_size** (int) --- the batch size to be sampled
+        * **seed** (int) --- the random number seed
         """
         self.params = params
         self.action_size = action_size
@@ -78,10 +92,13 @@ class PrioritizedReplayBuffer:
 
         Params
         ======
-            action_size (int): dimension of each action
-            buffer_size (int): maximum size of buffer
-            batch_size (int): size of each training batch
-            seed (int): random seed
+        * **action_size** (int): dimension of each action
+        
+        From a dictionary of parameters:
+        * **buffer_size** (int) --- the size of the buffer
+        * **batch_size** (int) --- the batch size to be sampled
+        * **seed** (int) --- the random number seed
+        * **alpha** (float) --- the alpha parameter for prioritized replay buffer sampling
         """
         self.params = params
         self.action_size = action_size
@@ -103,7 +120,7 @@ class PrioritizedReplayBuffer:
         """Randomly sample a batch of experiences from memory."""
         priorities = np.array(self.priorities).reshape(-1)
         priorities = np.power(priorities + EPSILON, self.alpha)  # add a small value epsilon to ensure numeric stability
-        p = priorities/np.sum(priorities)                              # compute a probability density over the priorities
+        p = priorities/np.sum(priorities)  # compute a probability density over the priorities
         sampled_indices = np.random.choice(np.arange(len(p)), size=self.batch_size, p=p)  # choose random indices given p
         experiences = [self.memory[i] for i in sampled_indices]     # subset the experiences
         p = np.array([p[i] for i in sampled_indices]).reshape(-1)
@@ -121,6 +138,14 @@ class PrioritizedReplayBuffer:
         return (states, actions, rewards, next_states, dones, weights, sampled_indices)
 
     def update(self, indices, priorities):
+        """
+        Update the priority values after training given the samples drawn.
+        
+        Params
+        ======
+        * **indices** (array-like) --- the sampled indices into the experience tuple
+        * **priorities** (array-like) --- the scaled priorities to be updated
+        """
         for i, priority in zip(indices, priorities):
             self.priorities[i] = priority
 

@@ -232,7 +232,7 @@ class DDQN_PER_Agent(Agent):
 
         Params
         ======
-            experiences (Tuple[torch.Variable]): tuple of (s, a, r, s', done) tuples 
+        * **experiences** (Tuple[torch.Variable]) --- tuple of (s, a, r, s', done) tuples 
         """
         states, actions, rewards, next_states, dones, weights, indices = experiences
 
