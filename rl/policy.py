@@ -5,19 +5,41 @@ import random
 
 
 class GLIEPolicy(ABC):
+    """
+    An abstract base class for GLIE Policies.
+    """
     def __init__(self):
         super().__init__()
     
     @abstractmethod
     def apply(self, action_values):
+        """
+        Apply the policy on given action values.
+
+        Params
+        ======
+        * **action_values** (array-like) --- the array of action values
+        """
         pass
     
     @abstractmethod
     def decay(self):
+        """
+        Decay the explorative nature of the policy.
+        """
         pass
 
 
 class EpsilonGreedy(GLIEPolicy):
+    """
+    Epsilon-greedy policy with epsilon decay given a dictionary of parameters.
+
+    Params
+    ======
+    * **eps_start** (float) --- the epsilon value to start with
+    * **eps_end** (float) --- the epsilon value to end with
+    * **eps_decay** (float) --- the decay rate for the epsilon value
+    """
     def __init__(self, params):
         super().__init__()
         self.eps = params.get('eps_start', 1.0)

@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class QNetwork(nn.Module):
-    """Actor (Policy) Model."""
+    """Q-Network."""
 
     def __init__(self, state_size, action_size, seed):
         """Initialize parameters and build model.
@@ -38,7 +38,7 @@ class QNetwork(nn.Module):
 
 
 class DuelingQNetwork(nn.Module):
-    """Actor (Policy) Model."""
+    """Dueling Q-Network"""
 
     def __init__(self, state_size, action_size, seed):
         """Initialize parameters and build model.
