@@ -104,7 +104,7 @@ class PrioritizedReplayBuffer:
         self.action_size = action_size
         self.buffer_size = self.params.get('buffer_size', 100000)
         self.memory = deque(maxlen=self.buffer_size)
-        self.priorities = deque(maxlen=selfbuffer_size)
+        self.priorities = deque(maxlen=self.buffer_size)
         self.batch_size = self.params.get('batch_size', 64)
         self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state", "done"])
         self.seed = random.seed(self.params.get('seed', 1234))
