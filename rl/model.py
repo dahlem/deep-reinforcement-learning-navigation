@@ -5,26 +5,30 @@ import torch.nn.functional as F
 class QNetwork(nn.Module):
     """Q-Network."""
 
-    def __init__(self, state_size, action_size, seed):
+    def __init__(self, params):
         """Initialize parameters and build model.
         Params
         ======
-            state_size (int): Dimension of each state
-            action_size (int): Dimension of each action
-            seed (int): Random seed
+        * **state_size** (int) --- Dimension of each state
+        * **action_size** (int) --- Dimension of each action
+        * **seed** (int): Random seed
+        * **hidden_layers** (array-like) --- array of the hidden layers
+        * **dropout** (float) --- dropout rate
         """
         super(QNetwork, self).__init__()
+        seed = params.get('seed', 0)
         self.seed = torch.manual_seed(seed)
+        self.state_size = params.get('state_size', None)
+        self.action_size = params.get('action_size', None)
         
-        hidden_layers = [64, 32]
-        self.hidden_layers = nn.ModuleList([nn.Linear(state_size, hidden_layers[0])])
+        hidden_layers = params.get('hidden_layers', None)
+        self.hidden_layers = nn.ModuleList([nn.Linear(self.state_size, hidden_layers[0])])
         
         # Add a variable number of more hidden layers
         layer_sizes = zip(hidden_layers[:-1], hidden_layers[1:])
         self.hidden_layers.extend([nn.Linear(h1, h2) for h1, h2 in layer_sizes])
-        self.output = nn.Linear(hidden_layers[-1], action_size)
-        self.dropout = nn.Dropout(p=0.05)
-
+        self.output = nn.Linear(hidden_layers[-1], self.action_size)
+        self.dropout = nn.Dropout(p = params.get('dropout', 0.05))
 
     def forward(self, state):
         """Build a network that maps state -> action values."""
@@ -44,30 +48,33 @@ class DuelingQNetwork(nn.Module):
         """Initialize parameters and build model.
         Params
         ======
-            state_size (int): Dimension of each state
-            action_size (int): Dimension of each action
-            seed (int): Random seed
+        * **state_size** (int) --- Dimension of each state
+        * **action_size** (int) --- Dimension of each action
+        * **seed** (int): Random seed
+        * **hidden_layers** (array-like) --- array of the hidden layers
+        * **dropout** (float) --- dropout rate
         """
         super(DuelingQNetwork, self).__init__()
-        self.action_size = action_size
+        seed = params.get('seed', 0)
         self.seed = torch.manual_seed(seed)
+        self.state_size = params.get('state_size', None)
+        self.action_size = params.get('action_size', None)
         
-        hidden_layers = [64, 32]
-        self.hidden_layers = nn.ModuleList([nn.Linear(state_size, hidden_layers[0])])
+        hidden_layers = params.get('hidden_layers', None)
+        self.hidden_layers = nn.ModuleList([nn.Linear(self.state_size, hidden_layers[0])])
         
         # Add a variable number of more hidden layers
         layer_sizes = zip(hidden_layers[:-1], hidden_layers[1:])
         self.hidden_layers.extend([nn.Linear(h1, h2) for h1, h2 in layer_sizes])
 
         # dueling layers
-        self.fc1_value = nn.Linear(in_features=32, out_features=16)
-        self.fc1_advantage = nn.Linear(in_features=32, out_features=16)
+        self.fc1_value = nn.Linear(in_features=hidden_layers[-1], out_features=16)
+        self.fc1_advantage = nn.Linear(in_features=hidden_layers[-1], out_features=16)
 
         self.fc2_value = nn.Linear(in_features=16, out_features=1)
-        self.fc2_advantage = nn.Linear(in_features=16, out_features=action_size)
+        self.fc2_advantage = nn.Linear(in_features=16, out_features=self.action_size)
 
-        self.dropout = nn.Dropout(p=0.05)
-
+        self.dropout = nn.Dropout(p = params.get('dropout', 0.05))
 
     def forward(self, state):
         """Build a network that maps state -> action values."""

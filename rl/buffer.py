@@ -43,20 +43,17 @@ class ReplayBuffer(object):
 class UniformReplayBuffer:
     """Fixed-size buffer to store experience tuples."""
 
-    def __init__(self, action_size, params):
+    def __init__(self, params):
         """Initialize a ReplayBuffer object.
 
         Params
         ======
-        * **action_size** (int): dimension of each action
-        
         From a dictionary of parameters:
         * **buffer_size** (int) --- the size of the buffer
         * **batch_size** (int) --- the batch size to be sampled
         * **seed** (int) --- the random number seed
         """
         self.params = params
-        self.action_size = action_size
         self.memory = deque(maxlen=self.params.get('buffer_size', 100000))  
         self.batch_size = self.params.get('batch_size', 64)
         self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state", "done"])
@@ -87,13 +84,11 @@ class UniformReplayBuffer:
 class PrioritizedReplayBuffer:
     """Fixed-size buffer to store prioritized experience tuples."""
 
-    def __init__(self, action_size, params):
+    def __init__(self, params):
         """Initialize a ReplayBuffer object.
 
         Params
         ======
-        * **action_size** (int): dimension of each action
-        
         From a dictionary of parameters:
         * **buffer_size** (int) --- the size of the buffer
         * **batch_size** (int) --- the batch size to be sampled
@@ -101,7 +96,6 @@ class PrioritizedReplayBuffer:
         * **alpha** (float) --- the alpha parameter for prioritized replay buffer sampling
         """
         self.params = params
-        self.action_size = action_size
         self.buffer_size = self.params.get('buffer_size', 100000)
         self.memory = deque(maxlen=self.buffer_size)
         self.priorities = deque(maxlen=self.buffer_size)

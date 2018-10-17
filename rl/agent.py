@@ -26,24 +26,19 @@ class Agent(object):
         
         Params
         ======
-        * **state_size** (int) --- the state space size
-        * **action_size** (int) --- the action space size
-        * **seed** (int) --- random number seed
         * **network_type** (string) --- can either be "QNetwork" or "DuelingQNetwork"
+        * **network_params** (dict) --- parameters for the network architecture
         * **lr** (float) --- the learning rate
         * **gamma** (float) -- the q-learning discount factor
         * **tau** (float) -- the soft update factor
         """
         self.params = params
-        self.state_size = self.params.get('state_size', None)
-        self.action_size = self.params.get('action_size', None)
-        self.seed = self.params.get('seed', 1234)
         self.gamma = self.params.get('gamma', 0.99)
         self.tau = self.params.get('tau', 0.4)
         
         # Q-Network
-        self.qnetwork_local = self.params.get('network_type', None)(self.state_size, self.action_size, self.seed).to(device)
-        self.qnetwork_target = self.params.get('network_type', None)(self.state_size, self.action_size, self.seed).to(device)
+        self.qnetwork_local = self.params.get('network_type', None)(self.params.get('network_params', None)).to(device)
+        self.qnetwork_target = self.params.get('network_type', None)(self.params.get('network_params', None)).to(device)
 
         self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=self.params.get('lr', 0.001))
 
@@ -130,7 +125,7 @@ class DDQN_UER_Agent(Agent):
         self.update_every = self.params.get('update_every', 4)
         
         # Replay memory
-        self.memory = UniformReplayBuffer(self.action_size, params.get('experience_params', None))
+        self.memory = UniformReplayBuffer(params.get('experience_params', None))
     
     def step(self, state, action, reward, next_state, done, beta):
         """Perform a step in the environment and trigger a learning procedure
@@ -197,7 +192,7 @@ class DDQN_PER_Agent(Agent):
         self.update_every = self.params.get('update_every', 4)
         
         # Replay memory
-        self.memory = PrioritizedReplayBuffer(self.action_size, params.get('experience_params', None))
+        self.memory = PrioritizedReplayBuffer(params.get('experience_params', None))
 
     def step(self, state, action, reward, next_state, done, beta):
         """Perform a step in the environment and trigger a learning procedure
