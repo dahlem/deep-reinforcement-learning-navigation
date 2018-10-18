@@ -30,6 +30,18 @@ class QNetwork(nn.Module):
         self.output = nn.Linear(hidden_layers[-1], self.action_size)
         self.dropout = nn.Dropout(p = params.get('dropout', 0.05))
 
+        for linear in self.hidden_layers:
+            self.init_weights(linear)
+        self.init_weights(self.output)
+
+    def init_weights(self, m):
+        """
+        Initialize the weights of the linear layers with the uniform Xavier initializer
+        """
+        if type(m) == nn.Linear:
+            nn.init.xavier_uniform_(m.weight)
+            m.bias.data.fill_(0.01)
+        
     def forward(self, state):
         """Build a network that maps state -> action values."""
         x = state
@@ -75,6 +87,22 @@ class DuelingQNetwork(nn.Module):
         self.fc2_advantage = nn.Linear(in_features=16, out_features=self.action_size)
 
         self.dropout = nn.Dropout(p = params.get('dropout', 0.05))
+
+        # initialize the weights
+        for linear in self.hidden_layers:
+            self,init_weights(linear)
+        self.init_weights(self.fc1_value)
+        self.init_weights(self.fc1_advantage)
+        self.init_weights(self.fc2_value)
+        self.init_weights(self.fc2_advantage)
+
+    def init_weights(self, m):
+        """
+        Initialize the weights of the linear layers with the uniform Xavier initializer
+        """
+        if type(m) == nn.Linear:
+            nn.init.xavier_uniform_(m.weight)
+            m.bias.data.fill_(0.01)
 
     def forward(self, state):
         """Build a network that maps state -> action values."""
