@@ -2,6 +2,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 class QNetwork(nn.Module):
     """Q-Network."""
 
@@ -16,6 +20,9 @@ class QNetwork(nn.Module):
         * **dropout** (float) --- dropout rate
         """
         super(QNetwork, self).__init__()
+
+        logger.debug('Parameter: %s', params)
+        
         seed = params.get('seed', 0)
         self.seed = torch.manual_seed(seed)
         self.state_size = params.get('state_size', None)
@@ -67,6 +74,9 @@ class DuelingQNetwork(nn.Module):
         * **dropout** (float) --- dropout rate
         """
         super(DuelingQNetwork, self).__init__()
+
+        logger.debug('Parameter: %s', params)
+
         seed = params.get('seed', 0)
         self.seed = torch.manual_seed(seed)
         self.state_size = params.get('state_size', None)
