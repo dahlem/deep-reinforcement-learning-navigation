@@ -7,6 +7,9 @@ from collections import namedtuple, deque
 
 import torch
 
+import logging
+logger = logging.getLogger(__name__)
+
 EPSILON = 1e-5          # small number for numeric stability
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -53,6 +56,8 @@ class UniformReplayBuffer:
         * **batch_size** (int) --- the batch size to be sampled
         * **seed** (int) --- the random number seed
         """
+        logger.debug('Parameter: %s', params)
+        
         self.params = params
         self.memory = deque(maxlen=self.params.get('buffer_size', 100000))  
         self.batch_size = self.params.get('batch_size', 64)
@@ -95,6 +100,8 @@ class PrioritizedReplayBuffer:
         * **seed** (int) --- the random number seed
         * **alpha** (float) --- the alpha parameter for prioritized replay buffer sampling
         """
+        logger.debug('Parameter: %s', params)
+
         self.params = params
         self.buffer_size = self.params.get('buffer_size', 100000)
         self.memory = deque(maxlen=self.buffer_size)

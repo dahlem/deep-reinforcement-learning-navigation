@@ -3,6 +3,9 @@ from abc import ABC, abstractmethod
 import numpy as np
 import random
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class GLIEPolicy(ABC):
     """
@@ -42,6 +45,8 @@ class EpsilonGreedy(GLIEPolicy):
     """
     def __init__(self, params):
         super().__init__()
+        logger.debug('Parameter: %s', params)
+
         self.eps = params.get('eps_start', 1.0)
         self.eps_end = params.get('eps_end', 0.01)
         self.eps_decay = params.get('eps_decay', 0.995)

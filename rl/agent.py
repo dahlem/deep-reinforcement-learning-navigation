@@ -12,6 +12,10 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 EPSILON = 1e-5          # small number for numeric stability
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -32,15 +36,19 @@ class Agent(object):
         * **gamma** (float) -- the q-learning discount factor
         * **tau** (float) -- the soft update factor
         """
+        logger.debug('Parameter: %s', params)
+
         self.params = params
         self.gamma = self.params.get('gamma', 0.99)
         self.tau = self.params.get('tau', 0.4)
         
         # Q-Network
-        self.qnetwork_local = self.params.get('network_type', None)(self.params.get('network_params', None)).to(device)
-        self.qnetwork_target = self.params.get('network_type', None)(self.params.get('network_params', None)).to(device)
+        self.model = self.params.get('network_type', None)(self.params.get('network_params', None)).to(device)
+        self.target_model = self.params.get('network_type', None)(self.params.get('network_params', None)).to(device)
+        # use the same network parameters
+        self.target_model.load_state_dict(self.model.state_dict())
 
-        self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=self.params.get('lr', 0.001))
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.params.get('lr', 0.001))
 
         # Replay memory: to be defined in derived classes
         self.memory = None
