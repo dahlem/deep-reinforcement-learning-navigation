@@ -90,17 +90,17 @@ class DuelingQNetwork(nn.Module):
         self.hidden_layers.extend([nn.Linear(h1, h2) for h1, h2 in layer_sizes])
 
         # dueling layers
-        self.fc1_value = nn.Linear(in_features=hidden_layers[-1], out_features=16)
-        self.fc1_advantage = nn.Linear(in_features=hidden_layers[-1], out_features=16)
+        self.fc1_value = nn.Linear(in_features=hidden_layers[-1], out_features=512)
+        self.fc2_value = nn.Linear(in_features=512, out_features=1)
 
-        self.fc2_value = nn.Linear(in_features=16, out_features=1)
-        self.fc2_advantage = nn.Linear(in_features=16, out_features=self.action_size)
+        self.fc1_advantage = nn.Linear(in_features=hidden_layers[-1], out_features=512)
+        self.fc2_advantage = nn.Linear(in_features=512, out_features=self.action_size)
 
         self.dropout = nn.Dropout(p = params.get('dropout', 0.05))
 
         # initialize the weights
         for linear in self.hidden_layers:
-            self,init_weights(linear)
+            self.init_weights(linear)
         self.init_weights(self.fc1_value)
         self.init_weights(self.fc1_advantage)
         self.init_weights(self.fc2_value)
@@ -117,19 +117,20 @@ class DuelingQNetwork(nn.Module):
     def forward(self, state):
         """Build a network that maps state -> action values."""
         x = state
-        batch_size = x.size(0)
         
         for linear in self.hidden_layers:
-            x = self.dropout(F.relu(linear(x)))
+            x = F.relu(linear(x))
+            x = self.dropout(x)
 
         # pass through value layers
         value = self.dropout(F.relu(self.fc1_value(x)))
-        value = self.dropout(self.fc2_value(value).expand(batch_size, self.action_size)) # expand the value to the larger action_size
-        
+        value = self.dropout(self.fc2_value(value)) # expand the value to the larger action_size
+
         # pass through advantage layers
         advantage = self.dropout(F.relu(self.fc1_advantage(x)))
         advantage = self.dropout(self.fc2_advantage(advantage))
-        
-        x = value + advantage - advantage.mean(1).unsqueeze(1).expand(batch_size, self.action_size)
+        advantage = advantage - advantage.mean()
+
+        x = torch.add(value, advantage)
 
         return x
