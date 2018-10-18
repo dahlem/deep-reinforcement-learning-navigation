@@ -44,7 +44,7 @@ class QNetwork(nn.Module):
 class DuelingQNetwork(nn.Module):
     """Dueling Q-Network"""
 
-    def __init__(self, state_size, action_size, seed):
+    def __init__(self, params):
         """Initialize parameters and build model.
         Params
         ======
