@@ -65,10 +65,10 @@ class Agent(object):
         * **policy** (GLIEPolicy) --- Policy, e.g., EpsilonGreedy, for epsilon-greedy action selection
         """
         state = torch.from_numpy(state).float().unsqueeze(0).to(device)
-        self.qnetwork_local.eval()  # we just do a forward evaluation
+        self.model.eval()  # we just do a forward evaluation
         with torch.no_grad():       # don't compute gradients in the process
-            action_values = self.qnetwork_local(state)
-        self.qnetwork_local.train() # mark the network as trainable
+            action_values = self.model(state)
+        self.model.train() # mark the network as trainable
 
         return policy.apply(action_values.cpu().data.numpy())
 
@@ -164,9 +164,9 @@ class DDQN_UER_Agent(Agent):
         """
         states, actions, rewards, next_states, dones = experiences
 
-        Q_targets_next = self.qnetwork_target(next_states).detach().max(1)[0].unsqueeze(1)
+        Q_targets_next = self.target_model(next_states).detach().max(1)[0].unsqueeze(1)
         Q_targets = rewards + self.gamma * Q_targets_next * (1 - dones)
-        Q_expected = self.qnetwork_local(states).gather(1, actions)
+        Q_expected = self.model(states).gather(1, actions)
 
         loss = F.mse_loss(Q_expected, Q_targets)
         
@@ -176,7 +176,7 @@ class DDQN_UER_Agent(Agent):
         self.optimizer.step()
         
         # ------------------- update target network ------------------- #
-        self.soft_update(self.qnetwork_local, self.qnetwork_target)
+        self.soft_update(self.model, self.target_model)
 
         
 class DDQN_PER_Agent(Agent):
@@ -212,11 +212,11 @@ class DDQN_PER_Agent(Agent):
         next_state = torch.from_numpy(next_state).float().unsqueeze(0).to(device)
         state = torch.from_numpy(state).float().unsqueeze(0).to(device)
         
-        self.qnetwork_local.eval()  # we just do a forward evaluation
+        self.model.eval()  # we just do a forward evaluation
         with torch.no_grad():       # don't compute gradients
-            Q_s_amax = self.qnetwork_local(next_state).detach().max(1)[0].unsqueeze(1).cpu().data.numpy()[0]
-            Q_s_a = self.qnetwork_local(state).cpu().data.numpy()[0][action]
-        self.qnetwork_local.train() # mark the network as trainable
+            Q_s_amax = self.model(next_state).detach().max(1)[0].unsqueeze(1).cpu().data.numpy()[0]
+            Q_s_a = self.model(state).cpu().data.numpy()[0][action]
+        self.model.train() # mark the network as trainable
 
         error = np.abs(Q_s_a - (reward + self.gamma * Q_s_amax))
 
@@ -239,9 +239,9 @@ class DDQN_PER_Agent(Agent):
         """
         states, actions, rewards, next_states, dones, weights, indices = experiences
 
-        Q_targets_next = self.qnetwork_target(next_states).detach().max(1)[0].unsqueeze(1)
+        Q_targets_next = self.target_model(next_states).detach().max(1)[0].unsqueeze(1)
         Q_targets = rewards + self.gamma * Q_targets_next * (1 - dones)
-        Q_expected = self.qnetwork_local(states).gather(1, actions)
+        Q_expected = self.model(states).gather(1, actions)
 
         loss  = (Q_expected - Q_targets).pow(2).reshape(weights.shape) * weights
         priorities = loss + EPSILON
@@ -256,4 +256,4 @@ class DDQN_PER_Agent(Agent):
         self.optimizer.step()
         
         # ------------------- update target network ------------------- #
-        self.soft_update(self.qnetwork_local, self.qnetwork_target)
+        self.soft_update(self.model, self.target_model)
