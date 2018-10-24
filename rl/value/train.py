@@ -1,5 +1,9 @@
 from collections import deque
+
+import numpy as np
+
 import torch
+
 
 def train(agent, env, params):
     """Training Loop for value-based RL methods.
