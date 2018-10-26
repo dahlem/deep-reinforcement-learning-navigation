@@ -55,7 +55,7 @@ class EpsilonGreedy(GLIEPolicy):
         if random.random() > self.eps:
             return np.argmax(action_values)
         else:
-            return random.choice(np.arange(len(action_values[0])))
+            return random.choice(np.arange(len(action_values.flatten())))
 
     def decay(self):
         self.eps = max(self.eps_end, self.eps_decay * self.eps)

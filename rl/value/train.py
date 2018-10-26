@@ -11,7 +11,6 @@ def train(agent, env, params):
     Params
     ======
         agent (object) --- the agent to train
-        env (object) --- the environment to master
         params (dict) --- the dictionary of parameters
     """
     n_episodes = params.get('episodes', 2000)
@@ -21,6 +20,7 @@ def train(agent, env, params):
     glie_policy = params.get('policy', None)
     name = params['name']
     brain_name = params['brain_name']
+    env = params['environment']
     
     scores = []                        # list containing scores from each episode
     scores_window = deque(maxlen=maxlen)  # last N scores
